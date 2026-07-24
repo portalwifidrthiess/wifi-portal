@@ -271,115 +271,65 @@
   </div>
 </div>
 
+
 <script>
-  // ============================================================
-  // CONFIGURARE RUIJIE / REYEE (protocol WISPr, External Portal)
-  // ============================================================
-  //
-  // Cand clientul se conecteaza la wifi, routerul Ruijie il
-  // redirectioneaza catre aceasta pagina si ataseaza parametri
-  // in URL (ex: ?userip=...&usermac=...&nasip=...&wlanacname=...).
-  //
-  // Deschide consola browserului (F12) dupa ce te conectezi la
-  // wifi si esti redirectionat aici, ca sa vezi exact ce parametri
-  // trimite routerul tau (se vor afisa mai jos).
-  //
-  // De regula, printre acei parametri se afla si un URL de
-  // "succes" / "login" (poate aparea sub numele de: success,
-  // redirect, login_url, res, wlanuserip callback etc.) catre
-  // care browserul trebuie redirectionat ca sa se elibereze
-  // efectiv internetul pentru acel client.
-  //
-  // Completeaza mai jos NUMELE exact al parametrului care contine
-  // acel URL de succes, dupa ce l-ai identificat din consola:
+const INSTAGRAM_URL = "https://www.instagram.com/dr.delia.thiess.clinic/";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxn56KaXmYaXc3w8Bpkmir5eCxmPBQcH4rNA_tlOqaxo5a-g1Rwp9fbL_omUhxmgrk/exec";
 
-  const SUCCESS_URL_PARAM_NAME = ""; // ex: "success" sau "redirect" -- de completat
+const params = new URLSearchParams(window.location.search);
 
-  // Adresa de destinatie finala, dupa ce accesul e aprobat
-  const INSTAGRAM_URL = "https://www.instagram.com/dr.delia.thiess.clinic/";
+const form = document.getElementById("portalForm");
+const btn = document.getElementById("connectBtn");
+const errorMsg = document.getElementById("errorMsg");
 
-  // URL-ul din Google Apps Script (Deploy -> Web app), cel care se
-  // termina in /exec. Lasa gol daca inca nu l-ai configurat.
-  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxn56KaXmYaXc3w8Bpkmir5eCxmPBQcH4rNA_tlOqaxo5a-g1Rwp9fbL_omUhxmgrk/exec";
-
-  // ============================================================
-
-  const params = new URLSearchParams(window.location.search);
-  const paramsObj = Object.fromEntries(params.entries());
-  console.log("Parametri primiti de la router:", paramsObj);
-
-  const form = document.getElementById('portalForm');
-  const btn = document.getElementById('connectBtn');
-  const errorMsg = document.getElementById('errorMsg');
-
-  form.addEventListener('submit', function (e) {
+form.addEventListener("submit", async function(e) {
     e.preventDefault();
 
-    const email = document.getElementById('email').value.trim();
-    const termsAccepted = document.getElementById('terms').checked;
+    const email = document.getElementById("email").value.trim();
+    const termsAccepted = document.getElementById("terms").checked;
+    const marketingAccepted = document.getElementById("marketing").checked;
 
     if (!email || !termsAccepted) {
-      errorMsg.style.display = 'block';
-      return;
+        errorMsg.style.display = "block";
+        return;
     }
-    errorMsg.style.display = 'none';
+
+    errorMsg.style.display = "none";
 
     btn.disabled = true;
-    btn.textContent = 'SE CONECTEAZĂ...';
+    btn.innerHTML = "SE CONECTEAZĂ...";
 
-    const marketingAccepted = document.getElementById('marketing').checked;
-    const userMac = params.get('usermac') || params.get('mac') || '';
+    const mac = params.get("mac") || "";
+    const loginUrl = params.get("login");
 
-    // Trimitem email-ul si consimtamantul catre Google Sheets.
-    // Folosim 'no-cors' pentru ca Apps Script nu raspunde cu headerele
-    // CORS necesare unui fetch normal; datele tot ajung in Sheet,
-    // doar ca nu putem citi raspunsul in JS -- nu ne trebuie oricum.
-    if (GOOGLE_SCRIPT_URL) {
-  fetch(GOOGLE_SCRIPT_URL, {
-    method: "POST",
-    mode: "no-cors",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      email: email,
-      marketing: marketingAccepted,
-      mac: userMac
-    })
-  })
-  .then(() => {
-    console.log("Date trimise către Google Sheets");
-  })
-  .catch((err) => {
-    console.error("Eroare Google Sheets:", err);
-  });
-}
-
-    // Pasul 1: daca stim URL-ul de succes trimis de router, il
-    // apelam intai ca sa se elibereze internetul pentru client.
-    const successUrl = SUCCESS_URL_PARAM_NAME
-      ? params.get(SUCCESS_URL_PARAM_NAME)
-      : null;
-
-    function goToInstagram() {
-      window.location.href = INSTAGRAM_URL;
+    try {
+        if (GOOGLE_SCRIPT_URL) {
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    email: email,
+                    marketing: marketingAccepted,
+                    mac: mac,
+                    timestamp: new Date().toISOString()
+                })
+            });
+        }
+    } catch (e) {
+        console.log("Google Sheets error:", e);
     }
 
-    if (successUrl) {
-      // Navigam catre URL-ul de succes al routerului; unele routere
-      // raspund cu propriul lor redirect, altele asteapta doar
-      // accesarea acelui link. Dupa un scurt delay, mergem spre
-      // Instagram indiferent de raspuns.
-      window.location.href = decodeURIComponent(successUrl);
-      setTimeout(goToInstagram, 1500);
+    if (loginUrl) {
+        window.location.href = decodeURIComponent(loginUrl);
     } else {
-      // Nu avem inca configurat numele parametrului de succes:
-      // mergem direct spre Instagram (acces liber, fara pas
-      // suplimentar de autentificare pe partea de router).
-      setTimeout(goToInstagram, 600);
+        window.location.href = INSTAGRAM_URL;
     }
-  });
+});
 </script>
+
 
 </body>
 </html>
